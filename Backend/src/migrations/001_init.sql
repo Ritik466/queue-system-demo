@@ -1,0 +1,16 @@
+CREATE TABLE IF NOT EXISTS queue_session (
+  id INTEGER PRIMARY KEY,
+  current_token INTEGER NOT NULL DEFAULT 0,
+  current_serving INTEGER NOT NULL DEFAULT 0
+);
+
+INSERT INTO queue_session (id)
+VALUES (1)
+ON CONFLICT (id) DO NOTHING;
+
+CREATE TABLE IF NOT EXISTS queue_tokens (
+  id SERIAL PRIMARY KEY,
+  token_number INTEGER NOT NULL,
+  status TEXT NOT NULL,
+  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
