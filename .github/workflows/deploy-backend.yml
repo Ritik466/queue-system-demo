@@ -12,7 +12,7 @@ env:
   AWS_REGION: ap-south-1
   ECR_REPOSITORY: queue-backend
   ECS_CLUSTER: queue-system-cluster
-  ECS_SERVICE: queue-backend-task-service-kacb9pkt
+  ECS_SERVICE: queue-backend-task-service-b9qht8r1
 
 jobs:
   deploy:
@@ -44,6 +44,34 @@ jobs:
           docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
           docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+      - name: Wait for service to be ACTIVE
+        run: |
+          echo "Waiting for service to reach ACTIVE state..."
+          max_attempts=30
+          attempt=0
+          while [ $attempt -lt $max_attempts ]; do
+            status=$(aws ecs describe-services \
+              --cluster ${{ env.ECS_CLUSTER }} \
+              --services ${{ env.ECS_SERVICE }} \
+              --region ${{ env.AWS_REGION }} \
+              --query 'services[0].status' \
+              --output text)
+            
+            if [ "$status" = "ACTIVE" ]; then
+              echo "✅ Service is ACTIVE, proceeding with update..."
+              break
+            fi
+            
+            echo "Service status: $status (attempt $((attempt+1))/$max_attempts)"
+            sleep 10
+            attempt=$((attempt+1))
+          done
+          
+          if [ "$status" != "ACTIVE" ]; then
+            echo "❌ Service did not reach ACTIVE state after $max_attempts attempts"
+            exit 1
+          fi
 
       - name: Update ECS service
         env:
